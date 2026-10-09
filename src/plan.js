@@ -78,7 +78,7 @@ export const DAYS = [
 // Ejercicios extra que estaban en la lista de Notion pero no en el plan
 export const EXTRA = ['Curl de muñeca con mancuernas', 'Curl de muñeca (flexión)', 'Curl inverso (barra o EZ)', 'Remo con barra']
 
-export const FEELS = ['Fácil', 'Moderado', 'Difícil', 'Al fallo']
+export const FEELS = ['Fácil', 'Moderado', 'Difícil', 'Al Fallo']
 
 export const GUIDE = [
   ['📋 Resumen rápido', [

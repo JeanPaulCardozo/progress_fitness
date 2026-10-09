@@ -7,15 +7,47 @@ export const getToken = () => localStorage.getItem(TOKEN)
 export const setToken = (t) => (t ? localStorage.setItem(TOKEN, t) : localStorage.removeItem(TOKEN))
 
 async function http(method, path, body) {
+  const form = body instanceof URLSearchParams
   const res = await fetch(BASE + path, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(getToken() && { Authorization: `Bearer ${getToken()}` }) },
-    body: body && JSON.stringify(body),
+    headers: { ...(!form && { 'Content-Type': 'application/json' }), ...(getToken() && { Authorization: `Bearer ${getToken()}` }) },
+    body: form ? body : body && JSON.stringify(body),
   })
   if (res.status === 401 && getToken()) { setToken(null); location.reload() }
   const data = res.status === 204 ? null : await res.json().catch(() => null)
-  if (!res.ok) throw new Error(data?.message || 'Algo salió mal. Inténtalo de nuevo.')
+  if (!res.ok) throw Object.assign(new Error(data?.message || 'Algo salió mal. Inténtalo de nuevo.'), { status: res.status })
   return data
+}
+
+// Adaptación a la API real: login con formulario OAuth2, rutas con barra final y campos en snake_case.
+// La API no guarda el nº de serie, así que se numera por orden dentro de cada fecha + día + ejercicio.
+const norm = (s) => ({ ...s, createdAt: s.created_at })
+const withSerie = (sets) => {
+  const n = {}
+  return sets.toSorted((a, b) => a.id - b.id).map((s) => {
+    const k = `${s.date}|${s.day}|${s.exercise}`
+    return { ...norm(s), serie: (n[k] = (n[k] ?? 0) + 1) }
+  })
+}
+const remote = {
+  register: async (name, email, password) => {
+    await http('POST', '/auth/register', { name, email, password })
+    return remote.login(email, password)
+  },
+  login: async (email, password) => {
+    const { access_token } = await http('POST', '/auth/login', new URLSearchParams({ username: email, password }))
+    setToken(access_token)
+    return { token: access_token, user: await remote.me() }
+  },
+  forgotPassword: (email) => http('POST', '/auth/forgot-password', { email }),
+  resetPassword: (token, password) => http('POST', '/auth/reset-password', { token, password }),
+  me: () => http('GET', '/auth/me'),
+  listSets: async () => withSerie(await http('GET', '/sets/')),
+  addSet: async (set) => ({ ...norm(await http('POST', '/sets/', set)), serie: set.serie }),
+  deleteSet: (id) => http('DELETE', `/sets/${id}`),
+  // Sin plan la API responde 404; la app lo trata como "usa el plan de ejemplo"
+  getPlan: () => http('GET', '/plan/').catch((e) => { if (e.status === 404) return { text: null }; throw e }),
+  savePlan: (text) => http('PUT', '/plan/', { text }),
 }
 
 // ponytail: mock solo para desarrollo, contraseñas en claro en localStorage. Se ignora en cuanto exista VITE_API_URL.
@@ -70,17 +102,17 @@ async function local(method, path, body) {
   return structuredClone(mock[`${method} ${p}`](body, id))
 }
 
-const call = BASE ? http : local
-
-export const api = {
-  register: (name, email, password) => call('POST', '/auth/register', { name, email, password }),
-  login: (email, password) => call('POST', '/auth/login', { email, password }),
-  forgotPassword: (email) => call('POST', '/auth/forgot-password', { email }),
-  resetPassword: (token, password) => call('POST', '/auth/reset-password', { token, password }),
-  me: () => call('GET', '/me'),
-  listSets: () => call('GET', '/sets'),
-  addSet: (set) => call('POST', '/sets', set),
-  deleteSet: (id) => call('DELETE', `/sets/${id}`),
-  getPlan: () => call('GET', '/plan'),
-  savePlan: (text) => call('PUT', '/plan', { text }),
+const mockApi = {
+  register: (name, email, password) => local('POST', '/auth/register', { name, email, password }),
+  login: (email, password) => local('POST', '/auth/login', { email, password }),
+  forgotPassword: (email) => local('POST', '/auth/forgot-password', { email }),
+  resetPassword: (token, password) => local('POST', '/auth/reset-password', { token, password }),
+  me: () => local('GET', '/me'),
+  listSets: () => local('GET', '/sets'),
+  addSet: (set) => local('POST', '/sets', set),
+  deleteSet: (id) => local('DELETE', `/sets/${id}`),
+  getPlan: () => local('GET', '/plan'),
+  savePlan: (text) => local('PUT', '/plan', { text }),
 }
+
+export const api = BASE ? remote : mockApi

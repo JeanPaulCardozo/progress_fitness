@@ -137,6 +137,7 @@ function AuthCard({ onAuth }) {
 
 /* ───────────────────────── Con sesión ───────────────────────── */
 
+const MAX_DAYS = 7 // la API valida day entre 1 y 7
 const TABS = [['train', '🏋️', 'Entrenar'], ['history', '🗓️', 'Historial'], ['progress', '📈', 'Progreso'], ['plan', '📋', 'Plan']]
 
 function Dashboard({ user, onLogout }) {
@@ -144,6 +145,7 @@ function Dashboard({ user, onLogout }) {
   const [sets, setSets] = useState(null)
   const [planText, setPlanText] = useState(null)
   const [error, setError] = useState(null)
+  const [toDelete, setToDelete] = useState(null)
 
   useEffect(() => {
     Promise.all([api.listSets(), api.getPlan()])
@@ -155,6 +157,7 @@ function Dashboard({ user, onLogout }) {
   const run = async (fn) => { setError(null); try { await fn(); return true } catch (e) { setError(e.message); return false } }
   const add = (s) => run(async () => { const row = await api.addSet(s); setSets((p) => [...p, row]) })
   const del = (id) => run(async () => { await api.deleteSet(id); setSets((p) => p.filter((s) => s.id !== id)) })
+  const askDel = (id) => setToDelete(sets.find((s) => s.id === id))
   const savePlan = (text) => run(async () => { await api.savePlan(text); setPlanText(text) })
 
   return (
@@ -174,13 +177,31 @@ function Dashboard({ user, onLogout }) {
       <main className="content">
         {error && <p className="msg error" role="alert">{error}</p>}
         {!plan ? <p className="muted center">{error ? '' : 'Cargando…'}</p> : <>
-          {tab === 'train' && <Train user={user} sets={sets} plan={plan} isDefault={planText === DEFAULT_PLAN} onAdd={add} onDelete={del} onSavePlan={savePlan} onGoPlan={() => setTab('plan')} />}
-          {tab === 'history' && <History sets={sets} days={plan.days} onDelete={del} />}
+          {tab === 'train' && <Train user={user} sets={sets} plan={plan} isDefault={planText === DEFAULT_PLAN} onAdd={add} onDelete={askDel} onSavePlan={savePlan} onGoPlan={() => setTab('plan')} />}
+          {tab === 'history' && <History sets={sets} days={plan.days} onDelete={askDel} />}
           {tab === 'progress' && <Progress sets={sets} days={plan.days} />}
           {tab === 'plan' && <Plan plan={plan} text={planText} onSave={savePlan} />}
         </>}
       </main>
+      {toDelete && <ConfirmDelete set={toDelete} onConfirm={() => del(toDelete.id)} onClose={() => setToDelete(null)} />}
     </div>
+  )
+}
+
+// <dialog> nativo: fondo, Esc para cerrar y foco atrapado sin librerías
+function ConfirmDelete({ set, onConfirm, onClose }) {
+  const ref = useRef()
+  useEffect(() => ref.current.showModal(), [])
+  return (
+    <dialog ref={ref} className="card modal" onClose={onClose} aria-labelledby="del-title">
+      <h2 id="del-title">¿Borrar esta serie?</h2>
+      <p><b>{set.exercise}</b> · Serie {set.serie}</p>
+      <p className="muted">{+set.weight} kg × {set.reps} reps · {set.feel} · {fmtDate(set.date)}</p>
+      <form method="dialog" className="actions">
+        <button className="btn ghost" autoFocus>Cancelar</button>
+        <button className="btn danger" onClick={onConfirm}>Borrar</button>
+      </form>
+    </dialog>
   )
 }
 
@@ -255,7 +276,6 @@ function Train({ user, sets, plan, isDefault, onAdd, onDelete, onSavePlan, onGoP
             history={sets.filter((s) => s.exercise === name && s.date < date)}
             onAdd={(s) => onAdd({ ...s, date, day: dayN, exercise: name })}
             onDelete={onDelete}
-            onRemove={inPlan(name) && (() => confirm(`¿Quitar "${name}" del Día ${dayN}? Las series que ya registraste se conservan.`) && editDay((ex) => ex.filter((e) => e[0] !== name)))}
           />
         ))}
       </div>
@@ -282,7 +302,7 @@ function Train({ user, sets, plan, isDefault, onAdd, onDelete, onSavePlan, onGoP
   )
 }
 
-function ExerciseCard({ name, series, reps, rest, todays, history, onAdd, onDelete, onRemove }) {
+function ExerciseCard({ name, series, reps, rest, todays, history, onAdd, onDelete }) {
   const prev = byDate(history)[0]?.[1].sort((a, b) => a.serie - b.serie)
   const top = Math.max(...(reps.match(/\d+/g) ?? [0]).map(Number))
   // Progresión del plan: si completaste todas las series en el tope del rango, toca subir peso.
@@ -305,7 +325,6 @@ function ExerciseCard({ name, series, reps, rest, todays, history, onAdd, onDele
         </div>
         <div className="ex-actions">
           <span className="count">{complete ? '✓' : `${todays.length}/${series}`}</span>
-          {onRemove && <button className="icon-btn" onClick={onRemove} aria-label={`Quitar ${name} del plan`} title="Quitar del plan">🗑</button>}
         </div>
       </header>
 
@@ -355,7 +374,7 @@ function History({ sets, days: planDays, onDelete }) {
                 {xs.sort((a, b) => a.serie - b.serie).map((s) => (
                   <li key={s.id} className={`feel-${FEELS.indexOf(s.feel)}`} title={[s.feel, s.notes].filter(Boolean).join(' · ')}>
                     {+s.weight}×{s.reps}
-                    <button aria-label="Borrar serie" onClick={() => confirm('¿Borrar esta serie?') && onDelete(s.id)}>×</button>
+                    <button aria-label="Borrar serie" onClick={() => onDelete(s.id)}>×</button>
                   </li>
                 ))}
               </ul>
@@ -488,6 +507,7 @@ function Plan({ plan, text, onSave }) {
           {preview.days.length === 0
             ? <p className="msg error">No encuentro ningún día. Empieza cada día con una línea como <code># Día 1: Pierna</code>.</p>
             : <>
+              {preview.days.length > MAX_DAYS && <p className="msg error">El plan puede tener como máximo {MAX_DAYS} días.</p>}
               <p className="muted">{plural(preview.days.length, 'día', 'días')} · {plural(nEx, 'ejercicio', 'ejercicios')} · {plural(preview.guide.length, 'sección', 'secciones')} de guía</p>
               <ul>
                 {preview.days.map((d, i) => (
@@ -512,7 +532,7 @@ Cardio: 5 min de comba
           <p className="muted">La app ignora las líneas que no siguen el formato. También puedes pegar el texto de tu plan de Notion.</p>
         </details>
         <div className="actions">
-          <button className="btn primary" disabled={!preview.days.length} onClick={async () => (await onSave(draft.trim())) && setDraft(null)}>Guardar plan</button>
+          <button className="btn primary" disabled={!preview.days.length || preview.days.length > MAX_DAYS} onClick={async () => (await onSave(draft.trim())) && setDraft(null)}>Guardar plan</button>
           <button className="btn ghost" onClick={() => setDraft(null)}>Cancelar</button>
           <button className="link" onClick={() => confirm('¿Reemplazar el texto por el plan de ejemplo?') && setDraft(DEFAULT_PLAN)}>Usar el plan de ejemplo</button>
         </div>

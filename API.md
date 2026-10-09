@@ -59,13 +59,13 @@ Basta con una columna `TEXT` en la tabla de usuarios (o una tabla `plans` con `u
 Set = {
   id: string        // UUID (el mock lo usa para enrutar el DELETE)
   date: string      // "YYYY-MM-DD", fecha del entrenamiento     (Notion: Fecha)
-  day: 1|2|3|4|5    // día del plan                            (Día)
+  day: number       // posición del día en el plan, entero de 1 a 7 (Día)
   exercise: string  // nombre del ejercicio                    (Ejercicio)
   serie: number     // nº de serie dentro de ese ejercicio y día  (Serie)
   reps: number      //                                         (Repeticiones)
   weight: number    // kg, admite decimales                    (Peso (kg))
   volume: number    // weight * reps, lo calcula el servidor   (Volumen (kg))
-  feel: "Fácil" | "Moderado" | "Difícil" | "Al fallo"          (Sensación)
+  feel: "Fácil" | "Moderado" | "Difícil" | "Al Fallo"          (Sensación)
   notes: string     // puede venir vacío                       (Notas)
   createdAt: string // ISO 8601                                (Fecha de creación)
 }

@@ -182,7 +182,7 @@ details[open] > summary { margin-bottom: .7rem; }
 .chips small { color: var(--muted); font-weight: 500; }
 .chips button { border: 0; background: none; color: var(--muted); width: 24px; height: 24px; border-radius: 6px; line-height: 1; }
 .chips button:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
-/* Sensación: Fácil → Al fallo */
+/* Sensación: Fácil → Al Fallo */
 .feel-0 { border-left-color: var(--ok) !important; }
 .feel-1 { border-left-color: var(--accent-2) !important; }
 .feel-2 { border-left-color: #fbbf24 !important; }
@@ -248,8 +248,6 @@ details[open] > summary { margin-bottom: .7rem; }
 /* ── Plan editable ── */
 .days { grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr)); }
 .ex-actions { display: flex; gap: .3rem; align-items: flex-start; }
-.icon-btn { border: 1px solid transparent; background: none; width: 30px; height: 30px; border-radius: 99px; font-size: .85rem; opacity: .55; transition: all .15s; }
-.icon-btn:hover { opacity: 1; background: color-mix(in srgb, var(--danger) 18%, transparent); }
 .add-ex { display: grid; gap: .5rem; padding: .9rem; }
 .add-row { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: .5rem; align-items: end; }
 
@@ -270,3 +268,11 @@ code { background: var(--bg-2); padding: .1rem .35rem; border-radius: 6px; }
 .warn { color: #fbbf24; }
 .actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .empty .btn { margin-top: 1rem; }
+
+.modal { color: var(--text); width: min(92vw, 380px); padding: 1.4rem; box-shadow: 0 24px 60px -20px #000; }
+.modal::backdrop { background: rgb(0 0 0 / .6); backdrop-filter: blur(3px); }
+.modal h2 { margin: 0 0 .8rem; }
+.modal p { margin: .2rem 0; }
+.modal .actions { justify-content: flex-end; margin-top: 1.2rem; }
+.btn.danger { background: var(--danger); color: #1a0606; }
+.btn.danger:hover { filter: brightness(1.08); }
