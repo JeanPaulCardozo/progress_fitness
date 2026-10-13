@@ -202,6 +202,13 @@ export function planToText({ intro, days, guide }) {
   ].filter(Boolean).join('\n\n')
 }
 
+// Videos de la pestaña Calentamiento: [título, enlace]
+export const WARMUPS = [["Tren Superior","https://www.youtube.com/watch?v=It4suIzpZvs&t=12s"],["Tren Inferior","https://www.youtube.com/watch?v=sfZIibJFp5s"]]
+
+// ID de un enlace de YouTube (youtu.be, watch?v=, shorts, embed, live); null si no es de YouTube
+export const youtubeId = (url) =>
+  url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([\w-]{11})/)?.[1] ?? null
+
 export const DEFAULT_PLAN = planToText({ intro: INTRO, days: DAYS, guide: GUIDE })
 
 export const AI_PROMPT = `Actúa como entrenador personal. Créame un plan de entrenamiento semanal.

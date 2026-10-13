@@ -1,6 +1,6 @@
 // node src/plan.check.js  → comprueba el parser del plan
 import assert from 'node:assert/strict'
-import { DAYS, DEFAULT_PLAN, GUIDE, parsePlan, planToText } from './plan.js'
+import { DAYS, DEFAULT_PLAN, GUIDE, parsePlan, planToText, WARMUPS, youtubeId } from './plan.js'
 
 const p = parsePlan(DEFAULT_PLAN)
 assert.equal(p.days.length, DAYS.length)
@@ -30,4 +30,10 @@ assert.deepEqual(n.days[0].ex, [['Press de banca con barra o mancuernas', 4, '6�
 assert.equal(n.days[0].sub, 'empuje + tracción ligera')
 assert.equal(n.days[0].warmup, 'movilidad de hombros.')
 assert.deepEqual(n.days[1].ex, [['Sentadilla goblet', 3, '10–12', ''], ['Plancha', 3, '30–45 s', '']])
+
+// Enlaces de YouTube para incrustar los videos de calentamiento
+for (const u of ['https://youtu.be/dQw4w9WgXcQ?si=x', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30', 'https://youtube.com/shorts/dQw4w9WgXcQ', 'https://m.youtube.com/watch?feature=share&v=dQw4w9WgXcQ'])
+  assert.equal(youtubeId(u), 'dQw4w9WgXcQ', u)
+assert.equal(youtubeId('https://vimeo.com/123'), null)
+for (const [title, url] of WARMUPS) assert.ok(title && /^https:\/\//.test(url), `video de calentamiento: ${title}`)
 console.log('plan.check ok')

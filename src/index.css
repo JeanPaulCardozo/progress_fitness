@@ -123,7 +123,7 @@ input::placeholder { color: #5b6473; }
 .avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink); font-weight: 700; }
 
 /* Navegación: barra inferior en móvil, pestañas arriba en escritorio */
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(4, 1fr); background: color-mix(in srgb, var(--bg-2) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; grid-template-columns: repeat(5, 1fr); background: color-mix(in srgb, var(--bg-2) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); }
 .tabs button { display: grid; justify-items: center; gap: 2px; border: 0; background: none; padding: .45rem 0; border-radius: 12px; font-size: .72rem; font-weight: 600; color: var(--muted); }
 .tabs button span { font-size: 1.2rem; filter: grayscale(1); opacity: .7; }
 .tabs button[aria-current='true'] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -275,4 +275,30 @@ code { background: var(--bg-2); padding: .1rem .35rem; border-radius: 6px; }
 .modal p { margin: .2rem 0; }
 .modal .actions { justify-content: flex-end; margin-top: 1.2rem; }
 .btn.danger { background: var(--danger); color: #1a0606; }
+
+/* ── Temporizador de descanso ── */
+.rest-timer { position: fixed; z-index: 11; left: 16px; right: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: .45rem; padding: .55rem .6rem .65rem 1rem; background: var(--card); border: 1px solid var(--accent); border-radius: 16px; box-shadow: 0 16px 40px -16px #000; overflow: hidden; }
+.rest-timer i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width .25s linear; }
+.rest-label { flex: 1; min-width: 0; color: var(--muted); font-size: .85rem; font-weight: 600; }
+.rest-timer b { font: 700 1.6rem/1 var(--display); font-variant-numeric: tabular-nums; color: var(--accent); margin-right: .2rem; }
+.rest-timer button { min-width: 44px; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); color: var(--text); font-weight: 600; }
+.rest-timer button:disabled { opacity: .4; }
+.rest-timer.done { border-color: var(--ok); }
+.rest-timer.done b, .rest-timer.done .rest-label { color: var(--ok); }
+.app.has-timer { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+.timer-fab { position: fixed; z-index: 11; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 1.5rem; box-shadow: 0 10px 28px -8px var(--accent); }
+@media (min-width: 760px) {
+  .rest-timer { bottom: 20px; }
+  .app.has-timer { padding-bottom: 96px; }
+  .timer-fab { right: 24px; bottom: 24px; }
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.modal-head h2 { margin: 0; }
+.presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.presets .btn { padding: .85rem 0; font: 700 1.15rem var(--display); }
+.custom-time { display: grid; grid-template-columns: 1fr 1fr auto; gap: .5rem; align-items: end; margin-top: 1rem; }
+
+/* ── Calentamiento ── */
+.video h3 { margin: 0 0 .7rem; font-size: 1.05rem; }
+.video iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 12px; background: var(--bg-2); }
 .btn.danger:hover { filter: brightness(1.08); }

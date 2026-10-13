@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, getToken, setToken } from './api'
-import { AI_PROMPT, DEFAULT_PLAN, EXTRA, FEELS, parsePlan, planToText } from './plan'
+import { AI_PROMPT, DEFAULT_PLAN, EXTRA, FEELS, parsePlan, planToText, WARMUPS, youtubeId } from './plan'
 
 const today = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
 const fmtDate = (d, o = { weekday: 'short', day: 'numeric', month: 'short' }) => new Date(d + 'T00:00').toLocaleDateString('es', o)
@@ -8,6 +8,20 @@ const kg = (n) => `${+(+n).toFixed(1)} kg`
 const vol = (sets) => sets.reduce((a, s) => a + s.weight * s.reps, 0)
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 const byDate =(sets) => Object.entries(Object.groupBy(sets, (s) => s.date)).sort(([a], [b]) => b.localeCompare(a))
+const clock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
+// El navegador solo deja sonar audio si el contexto se creó en un toque del usuario
+let audio
+const unlockAudio = () => { try { audio ??= new AudioContext(); audio.resume() } catch { /* sin audio */ } }
+function beep() {
+  if (!audio) return
+  for (const t of [0, 0.35, 0.7]) {
+    const o = audio.createOscillator(), g = audio.createGain(), at = audio.currentTime + t
+    o.frequency.value = 880
+    g.gain.setValueAtTime(0.25, at); g.gain.exponentialRampToValueAtTime(0.001, at + 0.25)
+    o.connect(g).connect(audio.destination); o.start(at); o.stop(at + 0.25)
+  }
+}
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -138,7 +152,7 @@ function AuthCard({ onAuth }) {
 /* ───────────────────────── Con sesión ───────────────────────── */
 
 const MAX_DAYS = 7 // la API valida day entre 1 y 7
-const TABS = [['train', '🏋️', 'Entrenar'], ['history', '🗓️', 'Historial'], ['progress', '📈', 'Progreso'], ['plan', '📋', 'Plan']]
+const TABS = [['train', '🏋️', 'Entrenar'], ['warmup', '🔥', 'Calentamiento'], ['history','🗓️', 'Historial'], ['progress', '📈', 'Progreso'], ['plan', '📋', 'Plan']]
 
 function Dashboard({ user, onLogout }) {
   const [tab, setTab] = useState('train')
@@ -146,6 +160,8 @@ function Dashboard({ user, onLogout }) {
   const [planText, setPlanText] = useState(null)
   const [error, setError] = useState(null)
   const [toDelete, setToDelete] = useState(null)
+  const [rest, setRest] = useState(null) // { end, total }: vive aquí para seguir contando al cambiar de pestaña
+  const [picker, setPicker] = useState(false)
 
   useEffect(() => {
     Promise.all([api.listSets(), api.getPlan()])
@@ -159,9 +175,10 @@ function Dashboard({ user, onLogout }) {
   const del = (id) => run(async () => { await api.deleteSet(id); setSets((p) => p.filter((s) => s.id !== id)) })
   const askDel = (id) => setToDelete(sets.find((s) => s.id === id))
   const savePlan = (text) => run(async () => { await api.savePlan(text); setPlanText(text) })
+  const startRest = (sec) => { unlockAudio(); setRest({ end: Date.now() + sec * 1000, total: sec }) }
 
   return (
-    <div className="app">
+    <div className={`app ${rest ? 'has-timer' : ''}`}>
       <header className="topbar">
         <Logo />
         <nav className="tabs">
@@ -178,12 +195,97 @@ function Dashboard({ user, onLogout }) {
         {error && <p className="msg error" role="alert">{error}</p>}
         {!plan ? <p className="muted center">{error ? '' : 'Cargando…'}</p> : <>
           {tab === 'train' && <Train user={user} sets={sets} plan={plan} isDefault={planText === DEFAULT_PLAN} onAdd={add} onDelete={askDel} onSavePlan={savePlan} onGoPlan={() => setTab('plan')} />}
+          {tab === 'warmup' && <Warmup />}
           {tab === 'history' && <History sets={sets} days={plan.days} onDelete={askDel} />}
           {tab === 'progress' && <Progress sets={sets} days={plan.days} />}
           {tab === 'plan' && <Plan plan={plan} text={planText} onSave={savePlan} />}
         </>}
       </main>
       {toDelete && <ConfirmDelete set={toDelete} onConfirm={() => del(toDelete.id)} onClose={() => setToDelete(null)} />}
+      {rest
+        ? <RestTimer timer={rest} onChange={setRest} />
+        : <button className="timer-fab" onClick={() => setPicker(true)} aria-label="Temporizador" title="Temporizador">⏱</button>}
+      {picker && <TimerPicker onStart={(s) => { startRest(s); setPicker(false) }} onClose={() => setPicker(false)} />}
+    </div>
+  )
+}
+
+const PRESETS = [30, 45, 60, 90, 120, 180]
+
+function TimerPicker({ onStart, onClose }) {
+  const ref = useRef()
+  useEffect(() => ref.current.showModal(), [])
+  function custom(e) {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    const s = +f.get('min') * 60 + +f.get('sec')
+    if (s > 0) onStart(s)
+  }
+  return (
+    <dialog ref={ref} className="card modal" onClose={onClose} aria-labelledby="timer-title">
+      <div className="modal-head">
+        <h2 id="timer-title">Temporizador</h2>
+        <button className="btn ghost sm" onClick={onClose} aria-label="Cerrar">✕</button>
+      </div>
+      <div className="presets">
+        {PRESETS.map((s) => <button key={s} className="btn ghost" onClick={() => onStart(s)}>{clock(s)}</button>)}
+      </div>
+      <form className="custom-time" onSubmit={custom}>
+        <label>min<input name="min" type="number" inputMode="numeric" min="0" max="59" defaultValue="1" /></label>
+        <label>seg<input name="sec" type="number" inputMode="numeric" min="0" max="59" defaultValue="0" /></label>
+        <button className="btn primary">Iniciar</button>
+      </form>
+    </dialog>
+  )
+}
+
+function Warmup() {
+  if (!WARMUPS.length) return <Empty text="Todavía no hay videos de calentamiento." />
+  return (
+    <>
+      <h1>Calentamiento</h1>
+      {WARMUPS.map(([title, url]) => {
+        const id = youtubeId(url)
+        return (
+          <article key={url} className="card video">
+            <h3>{title}</h3>
+            {id
+              ? <iframe src={`https://www.youtube-nocookie.com/embed/${id}`} title={title} loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+              : <a className="btn ghost" href={url} target="_blank" rel="noopener noreferrer">▶ Ver video</a>}
+          </article>
+        )
+      })}
+    </>
+  )
+}
+
+// Cuenta contra una hora de fin, no con ticks: no se desfasa si el navegador frena la pestaña
+function RestTimer({ timer, onChange }) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(id) }, [])
+  useEffect(() => { // pantalla encendida mientras descansas (si el navegador lo permite)
+    let lock, gone = false
+    navigator.wakeLock?.request('screen').then((l) => (gone ? l.release() : (lock = l)), () => {})
+    return () => { gone = true; lock?.release() }
+  }, [])
+  const left = Math.max(0, Math.ceil((timer.end - now) / 1000))
+  const done = left === 0
+  useEffect(() => {
+    if (!done) return
+    beep(); navigator.vibrate?.([300, 150, 300])
+    const t = setTimeout(() => onChange(null), 6000)
+    return () => clearTimeout(t)
+  }, [done, onChange])
+  const shift = (s) => onChange({ end: Math.max(timer.end, Date.now()) + s * 1000, total: done ? s : timer.total })
+
+  return (
+    <div className={`rest-timer ${done ? 'done' : ''}`} role="timer" aria-live={done ? 'assertive' : 'off'}>
+      <i style={{ width: `${Math.min(100, (left / timer.total) * 100)}%` }} />
+      <span className="rest-label">{done ? '¡Siguiente serie!' : 'Descanso'}</span>
+      <b>{clock(left)}</b>
+      <button disabled={done} onClick={() => onChange({ ...timer, end: timer.end - 15000 })} aria-label="Quitar 15 segundos">−15</button>
+      <button onClick={() => shift(15)} aria-label="Añadir 15 segundos">+15</button>
+      <button onClick={() => onChange(null)} aria-label="Cerrar temporizador">✕</button>
     </div>
   )
 }
