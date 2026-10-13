@@ -53,6 +53,12 @@ input, select {
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
 input::placeholder { color: #5b6473; }
+.pw { position: relative; display: block; }
+.pw input { padding-right: 3rem; }
+.pw input::-ms-reveal { display: none; } /* Edge trae su propio ojo; usamos el nuestro */
+.pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--muted); }
+.pw-toggle:hover, .pw-toggle:focus-visible { color: var(--text); }
+.pw-toggle[aria-pressed='true'] { color: var(--accent); }
 
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem; }
 .msg { border-radius: 12px; padding: .7rem .9rem; font-size: .9rem; margin: .2rem 0 .6rem; }

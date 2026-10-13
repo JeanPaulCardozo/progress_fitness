@@ -38,6 +38,14 @@ export default function App() {
   return user ? <Dashboard user={user} onLogout={logout} /> : <Landing onAuth={login} />
 }
 
+const Eye = ({ off }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+    <circle cx="12" cy="12" r="3" />
+    {off && <path d="M3 3l18 18" />}
+  </svg>
+)
+
 const Logo = () => (
   <span className="logo"><span className="logo-mark">▲</span>PROGRESS<b>FIT</b></span>
 )
@@ -77,8 +85,9 @@ function AuthCard({ onAuth }) {
   const [mode, setMode] = useState(resetToken ? 'reset' : 'login')
   const [msg, setMsg] = useState(null) // { type: 'error' | 'ok', text, link? }
   const [busy, setBusy] = useState(false)
+  const [show, setShow] = useState(false)
 
-  const go = (m) => { setMode(m); setMsg(null) }
+  const go = (m) => { setMode(m); setMsg(null); setShow(false) }
 
   async function submit(e) {
     e.preventDefault()
@@ -111,8 +120,16 @@ function AuthCard({ onAuth }) {
     forgot: ['Recuperar contraseña', 'Te enviaremos un enlace a tu correo.'],
     reset: ['Nueva contraseña', 'Elige una contraseña nueva para tu cuenta.'],
   }
+  // Un solo interruptor para todos los campos: al registrarse se ven las dos contraseñas a la vez
   const pw = (name, label, ac) => (
-    <label>{label}<input name={name} type="password" required minLength={8} autoComplete={ac} placeholder="Mínimo 8 caracteres" /></label>
+    <label>{label}
+      <span className="pw">
+        <input name={name} type={show ? 'text' : 'password'} required minLength={8} autoComplete={ac} placeholder="Mínimo 8 caracteres" />
+        <button type="button" className="pw-toggle" onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'} title={show ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+          <Eye off={show} />
+        </button>
+      </span>
+    </label>
   )
 
   return (
