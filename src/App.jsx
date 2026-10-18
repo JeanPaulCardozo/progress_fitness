@@ -167,13 +167,6 @@ function AuthCard({ onAuth, notice }) {
       <h2>{titles[mode][0]}</h2>
       <p className="muted">{titles[mode][1]}</p>
 
-      {googleLoginUrl && (mode === 'login' || mode === 'register') && (
-        <>
-          <a className="btn google block" href={googleLoginUrl}><GoogleG />Continuar con Google</a>
-          <p className="or"><span>o con tu correo</span></p>
-        </>
-      )}
-
       <form onSubmit={submit} key={mode}>
         {mode === 'register' && <label>Nombre<input name="name" required autoComplete="name" placeholder="Tu nombre" /></label>}
         {mode !== 'reset' && <label>Correo<input name="email" type="email" required autoComplete="email" inputMode="email" placeholder="tu@correo.com" /></label>}
@@ -192,6 +185,13 @@ function AuthCard({ onAuth, notice }) {
           {busy ? 'Un momento…' : { login: 'Entrar', register: 'Crear cuenta', forgot: 'Enviar enlace', reset: 'Guardar contraseña' }[mode]}
         </button>
       </form>
+
+      {googleLoginUrl && (mode === 'login' || mode === 'register') && (
+        <>
+          <p className="or"><span>o</span></p>
+          <a className="btn google block" href={googleLoginUrl}><GoogleG />Continuar con Google</a>
+        </>
+      )}
       {(mode === 'forgot' || mode === 'reset') && <button className="link center" onClick={() => go('login')}>← Volver a iniciar sesión</button>}
     </section>
   )
