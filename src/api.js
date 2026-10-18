@@ -3,6 +3,9 @@
 const BASE = import.meta.env.VITE_API_URL
 const TOKEN = 'pf_token'
 
+// El login con Google es una navegación a la API, no un fetch; sin API (mock) no existe
+export const googleLoginUrl = BASE ? `${BASE}/auth/google/login` : null
+
 export const getToken = () => localStorage.getItem(TOKEN)
 export const setToken = (t) => (t ? localStorage.setItem(TOKEN, t) : localStorage.removeItem(TOKEN))
 

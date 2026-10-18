@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api, getToken, setToken } from './api'
+import { api, getToken, googleLoginUrl, setToken } from './api'
 import { AI_PROMPT, DEFAULT_PLAN, EXTRA, FEELS, parsePlan, planToText, WARMUPS, youtubeId } from './plan'
 
 const today = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en hora local
@@ -23,20 +23,44 @@ function beep() {
   }
 }
 
+// Vuelta del login con Google: la API redirige a /#token=... o /#error=...
+const OAUTH_ERRORS = {
+  google: 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.',
+  google_email: 'Tu correo de Google no está verificado. Verifícalo en Google o entra con correo y contraseña.',
+}
+function takeOAuthResult() {
+  const h = new URLSearchParams(location.hash.slice(1))
+  if (!h.has('token') && !h.has('error')) return null
+  history.replaceState(null, '', location.pathname + location.search) // que el token no quede en la URL ni en el historial
+  if (h.get('token')) setToken(h.get('token'))
+  return h.get('error') && (OAUTH_ERRORS[h.get('error')] ?? 'No se pudo iniciar sesión.')
+}
+const OAUTH_ERROR = takeOAuthResult() // una sola vez, al cargar la página
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [booting, setBooting] = useState(!!getToken())
+  const [notice, setNotice] = useState(OAUTH_ERROR)
 
   useEffect(() => {
     if (getToken()) api.me().then(setUser).catch(() => setToken(null)).finally(() => setBooting(false))
   }, [])
 
   const login = ({ token, user }) => { setToken(token); setUser(user) }
-  const logout = () => { setToken(null); setUser(null) }
+  const logout = () => { setToken(null); setUser(null); setNotice(null) }
 
   if (booting) return <div className="boot"><Logo /></div>
-  return user ? <Dashboard user={user} onLogout={logout} /> : <Landing onAuth={login} />
+  return user ? <Dashboard user={user} onLogout={logout} /> : <Landing onAuth={login} notice={notice} />
 }
+
+const GoogleG = () => (
+  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+  </svg>
+)
 
 const Eye = ({ off }) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -52,7 +76,7 @@ const Logo = () => (
 
 /* ───────────────────────── Sin sesión ───────────────────────── */
 
-function Landing({ onAuth }) {
+function Landing({ onAuth, notice }) {
   return (
     <div className="landing">
       <div className="blobs" aria-hidden><i /><i /><i /></div>
@@ -74,16 +98,16 @@ function Landing({ onAuth }) {
             <div className="mock-sets"><span>70×8</span><span>70×8</span><span>72,5×6</span><span className="new">+ serie</span></div>
           </div>
         </section>
-        <AuthCard onAuth={onAuth} />
+        <AuthCard onAuth={onAuth} notice={notice} />
       </main>
     </div>
   )
 }
 
-function AuthCard({ onAuth }) {
+function AuthCard({ onAuth, notice }) {
   const resetToken = new URLSearchParams(location.search).get('reset')
   const [mode, setMode] = useState(resetToken ? 'reset' : 'login')
-  const [msg, setMsg] = useState(null) // { type: 'error' | 'ok', text, link? }
+  const [msg, setMsg] = useState(notice && { type: 'error', text: notice }) // { type: 'error' | 'ok', text, link? }
   const [busy, setBusy] = useState(false)
   const [show, setShow] = useState(false)
 
@@ -142,6 +166,13 @@ function AuthCard({ onAuth }) {
       )}
       <h2>{titles[mode][0]}</h2>
       <p className="muted">{titles[mode][1]}</p>
+
+      {googleLoginUrl && (mode === 'login' || mode === 'register') && (
+        <>
+          <a className="btn google block" href={googleLoginUrl}><GoogleG />Continuar con Google</a>
+          <p className="or"><span>o con tu correo</span></p>
+        </>
+      )}
 
       <form onSubmit={submit} key={mode}>
         {mode === 'register' && <label>Nombre<input name="name" required autoComplete="name" placeholder="Tu nombre" /></label>}
