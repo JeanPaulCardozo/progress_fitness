@@ -27,8 +27,8 @@ jobs:
       - run: npm run check
       - run: npm run build
         env:
-          # Variable del repo (Settings → Variables). Vacía = modo local con localStorage.
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # URL pública de la API. Vacía = modo local con localStorage.
+          VITE_API_URL: https://paul.tail938e36.ts.net
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
